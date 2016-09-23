@@ -5,6 +5,7 @@ import json
 import time
 import requests
 import subprocess
+import shutil
 
 from os import environ
 try:
@@ -17,7 +18,7 @@ from pprint import pprint
 from biokbase.workspace.client import Workspace as workspaceService
 from SaveLargeDataToWsTest.SaveLargeDataToWsTestImpl import SaveLargeDataToWsTest
 from SaveLargeDataToWsTest.SaveLargeDataToWsTestServer import MethodContext
-
+from WsLargeDataIO.WsLargeDataIOClient import WsLargeDataIO
 
 class SaveLargeDataToWsTestTest(unittest.TestCase):
 
@@ -78,13 +79,18 @@ class SaveLargeDataToWsTestTest(unittest.TestCase):
         input_file = os.path.join(data_dir, "arab.json.gz")
         subprocess.Popen(["gunzip", input_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
         input_file = os.path.join(data_dir, "arab.json")
-        genome = None
-        print("Loading genome object from file into memory...")
-        with open(input_file) as f:
-            genome = json.load(f)
-        print("Loaded!")
+        temp_file = os.path.join("/kb/module/work/tmp", "arab.json")
+        shutil.move(input_file, temp_file)
+        #genome = None
+        #print("Loading genome object from file into memory...")
+        #with open(input_file) as f:
+        #    genome = json.load(f)
+        #print("Loaded!")
         print("Saving it to Workspace...")
         genome_object_name = "genome.1"
-        self.getWsClient().save_objects({'workspace': self.getWsName(), 'objects':
-                [{ "type":"KBaseGenomes.Genome", "data": genome, "name": genome_object_name}]})
-        print("Saved!")
+        token = environ.get('KB_AUTH_TOKEN', None)
+        client = WsLargeDataIO(os.environ['SDK_CALLBACK_URL'], token=token)
+        ret = client.save_objects({'workspace': self.getWsName(), 'objects':
+                [{ "type":"KBaseGenomes.Genome", "data_json_file": temp_file, 
+                "name": genome_object_name}]})
+        print("Saved: " + str(ret))
